@@ -1,0 +1,45 @@
+diff --git a/osfmk/kern/startup.c b/osfmk/kern/startup.c
+--- a/osfmk/kern/startup.c
++++ b/osfmk/kern/startup.c
+@@ -687,6 +687,7 @@
+ #ifdef  IOKIT
+ 	kernel_bootstrap_log("PE_init_iokit");
+ 	PE_init_iokit();
++	printf("CEPH: PE_init_iokit done\n");
+ #endif
+ 
+ 	assert(ml_get_interrupts_enabled() == FALSE);
+@@ -702,21 +703,25 @@
+ 	ml_spin_debug_clear_self();
+ #endif
+ 	(void) spllo();         /* Allow interruptions */
++	printf("CEPH: interrupts enabled (spllo done)\n");
+ 
+ 	/*
+ 	 * This will start displaying progress to the user, start as early as possible
+ 	 */
+ 	initialize_screen(NULL, kPEAcquireScreen);
++	printf("CEPH: initialize_screen done\n");
+ 
+ 	/*
+ 	 *	Initialize the shared region module.
+ 	 */
+ 	vm_commpage_init();
+ 	vm_commpage_text_init();
++	printf("CEPH: commpage done\n");
+ 
+ #if CONFIG_MACF
+ 	kernel_bootstrap_log("mac_policy_initmach");
+ 	mac_policy_initmach();
++	printf("CEPH: mac_policy_initmach done\n");
+ #if CONFIG_VNGUARD
+ 	kernel_bootstrap_log("vnguard_policy_init");
+ 	vnguard_policy_init();
+@@ -788,6 +793,7 @@
+ 	 */
+ #ifdef  MACH_BSD
+ 	bsd_init();
++	printf("CEPH: entering bsd_init\n");
+ #endif
+ 
+ 
