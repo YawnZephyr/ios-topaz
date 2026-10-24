@@ -1,0 +1,22 @@
+diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
+--- a/pexpert/arm/pe_init.c
++++ b/pexpert/arm/pe_init.c
+@@ -506,6 +506,18 @@
+ void
+ PE_create_console(void)
+ {
++	int sweet_noearly = 0;
++
++	/*
++	 * cepheus: the sweet boot console and the video console created by
++	 * initialize_screen() both draw into the same framebuffer and keep
++	 * separate scroll state, so their output interleaves. With
++	 * sweetnoearly=1 only the video console is used.
++	 */
++	if (PE_parse_boot_argn("sweetnoearly", &sweet_noearly,
++	    sizeof(sweet_noearly)) && sweet_noearly) {
++		return;
++	}
+ 	/*
+ 	 * Check the head of VRAM for a panic log saved on last panic.
+ 	 * Do this before the VRAM is trashed.
