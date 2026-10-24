@@ -1,0 +1,36 @@
+diff --git a/osfmk/kern/printf.c b/osfmk/kern/printf.c
+--- a/osfmk/kern/printf.c
++++ b/osfmk/kern/printf.c
+@@ -856,9 +856,32 @@
+ #endif
+ }
+ 
++/* cepheus: mirror console output into a fixed RAM buffer so the next boot's
++ * shim can print the boot log in exact order (the framebuffer console has two
++ * writers, so its on-screen ordering cannot be trusted). */
++#define CEPH_LOG_PA     0x9e000000UL
++#define CEPH_LOG_SIZE   0x200000U
++#define CEPH_LOG_MAGIC  0x43455048U     /* 'CEPH' */
++
++static void
++ceph_log_putc(char c)
++{
++	volatile uint32_t *hdr = (volatile uint32_t *)CEPH_LOG_PA;
++	volatile char *buf = (volatile char *)(CEPH_LOG_PA + 8);
++	uint32_t off = hdr[1];
++
++	if (hdr[0] != CEPH_LOG_MAGIC || off >= CEPH_LOG_SIZE - 9) {
++		return;
++	}
++	buf[off] = c;
++	buf[off + 1] = 0;
++	hdr[1] = off + 1;
++}
++
+ void
+ cons_putc_locked(char c)
+ {
++	ceph_log_putc(c);
+ 	if (!disableConsoleOutput) {
+ 		console_write_char(c);
+ 	}
