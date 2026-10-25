@@ -1,36 +1,54 @@
 diff --git a/osfmk/kern/printf.c b/osfmk/kern/printf.c
 --- a/osfmk/kern/printf.c
 +++ b/osfmk/kern/printf.c
-@@ -856,9 +856,32 @@
+@@ -856,9 +856,50 @@
  #endif
  }
  
-+/* cepheus: mirror console output into a fixed RAM buffer so the next boot's
-+ * shim can print the boot log in exact order (the framebuffer console has two
-+ * writers, so its on-screen ordering cannot be trusted). */
-+#define CEPH_LOG_PA     0x9e000000UL
-+#define CEPH_LOG_SIZE   0x200000U
-+#define CEPH_LOG_MAGIC  0x43455048U     /* 'CEPH' */
++/*
++ * cepheus: keep the console log in .bss so that a later boot's shim can read it
++ * straight out of DRAM. Writing through the kernel's own virtual address needs
++ * no mapping, and each completed line is cleaned from the cache so it survives
++ * a reset even when the panic path itself dies.
++ */
++#define CEPH_LOGBUF_SIZE  (1u << 20)
++#define CEPH_LOGBUF_MAGIC 0x43455048u   /* 'CEPH' */
++
++extern void CleanPoC_DcacheRegion_Force(vm_offset_t va, size_t length);
++
++__attribute__((section("__DATA,__cephlog"), aligned(16384)))
++volatile char ceph_logbuf[CEPH_LOGBUF_SIZE];
 +
 +static void
-+ceph_log_putc(char c)
++ceph_logbuf_putc(char c)
 +{
-+	volatile uint32_t *hdr = (volatile uint32_t *)CEPH_LOG_PA;
-+	volatile char *buf = (volatile char *)(CEPH_LOG_PA + 8);
-+	uint32_t off = hdr[1];
++	volatile uint32_t *hdr = (volatile uint32_t *)ceph_logbuf;
++	uint32_t off;
 +
-+	if (hdr[0] != CEPH_LOG_MAGIC || off >= CEPH_LOG_SIZE - 9) {
++	if (hdr[0] != CEPH_LOGBUF_MAGIC) {
++		hdr[0] = CEPH_LOGBUF_MAGIC;
++		hdr[1] = 0;
++	}
++	off = hdr[1];
++	if (off >= CEPH_LOGBUF_SIZE - 9) {
 +		return;
 +	}
-+	buf[off] = c;
-+	buf[off + 1] = 0;
++	ceph_logbuf[8 + off] = c;
++	ceph_logbuf[8 + off + 1] = 0;
 +	hdr[1] = off + 1;
++
++	if (c == '\n') {
++		vm_offset_t start = (off > 128) ? (off - 128) : 0;
++
++		CleanPoC_DcacheRegion_Force(
++		    (vm_offset_t)(ceph_logbuf + 8 + start), off - start + 1);
++	}
 +}
 +
  void
  cons_putc_locked(char c)
  {
-+	ceph_log_putc(c);
++	ceph_logbuf_putc(c);
  	if (!disableConsoleOutput) {
  		console_write_char(c);
  	}
