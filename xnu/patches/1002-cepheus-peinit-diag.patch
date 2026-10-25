@@ -1,0 +1,56 @@
+diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
+--- a/pexpert/arm/pe_init.c
++++ b/pexpert/arm/pe_init.c
+@@ -247,8 +247,10 @@
+ 	uint32_t        populate_registry_time_value = 0;
+ 
+ 	PE_init_printf(TRUE);
++	printf("CEPH IO: enter\n");
+ 
+ 	printf("iBoot version: %s\n", iBoot_version);
++	printf("CEPH IO: version printed\n");
+ #if defined(TARGET_OS_OSX) && defined(__arm64__)
+ 	printf("iBoot Stage 2 version: %s\n", iBoot_Stage_2_version);
+ #endif /* defined(TARGET_OS_OSX) && defined(__arm64__) */
+@@ -271,6 +273,7 @@
+ 	}
+ 
+ 	pe_prepare_images();
++	printf("CEPH IO: images prepared\n");
+ 
+ 	scale = PE_state.video.v_scale;
+ 	flip = 1;
+@@ -327,6 +330,7 @@
+ 	}
+ 
+ 	if (kdebug_enable && kdebug_debugid_enabled(IOKDBG_CODE(DBG_BOOTER, 0))) {
++	printf("CEPH IO: progress decided\n");
+ 		/* Trace iBoot-provided timing information. */
+ 		if (kSuccess == SecureDTLookupEntry(0, "/chosen/iBoot", &entry)) {
+ 			uint32_t const * value_ptr;
+@@ -360,7 +364,9 @@
+ 	}
+ 
+ 	InitIOKit(PE_state.deviceTreeHead);
++	printf("CEPH IO: before InitIOKit\n");
+ 	ConfigureIOKit();
++	printf("CEPH IO: after ConfigureIOKit\n");
+ }
+ 
+ void
+@@ -380,6 +386,7 @@
+ 	 */
+ 	zalloc_iokit_lockdown();
+ 	StartIOKitMatching();
++	printf("CEPH IO: after StartIOKitMatching\n");
+ }
+ 
+ void
+@@ -388,6 +395,7 @@
+ 	assert(PE_state.initialized);
+ 	PE_state.deviceTreeHead = (void *)((uintptr_t)PE_state.deviceTreeHead + slide);
+ 	SecureDTInit(PE_state.deviceTreeHead, PE_state.deviceTreeSize);
++	printf("CEPH IO: after SecureDTInit\n");
+ }
+ 
+ void
