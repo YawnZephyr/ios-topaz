@@ -1,15 +1,13 @@
 diff --git a/osfmk/kern/lock_ticket.c b/osfmk/kern/lock_ticket.c
 --- a/osfmk/kern/lock_ticket.c
 +++ b/osfmk/kern/lock_ticket.c
-@@ -28,6 +28,7 @@
+@@ -125,10 +125,28 @@
+ 	panic("Invalid HW ticket lock %p <0x%08x>", lck, lck->lck_value);
+ }
  
- #define LOCK_PRIVATE 1
- #include <stdint.h>
-+#include <kern/printf.h>
- #include <kern/thread.h>
- #include <kern/locks_internal.h>
- #include <kern/locks.h>
-@@ -129,6 +130,22 @@
++extern int printf(const char *fmt, ...);
++
+ __abortlike
  static void
  __lck_ticket_invalid_panic(lck_ticket_t *lck)
  {
