@@ -1,14 +1,14 @@
 diff --git a/osfmk/kern/printf.c b/osfmk/kern/printf.c
 --- a/osfmk/kern/printf.c
 +++ b/osfmk/kern/printf.c
-@@ -856,9 +856,50 @@
- #endif
+@@ -864,10 +864,86 @@
+ 	}
  }
  
 +/*
-+ * cepheus: keep the console log in .bss so that a later boot's shim can read it
-+ * straight out of DRAM. Writing through the kernel's own virtual address needs
-+ * no mapping, and each completed line is cleaned from the cache so it survives
++ * cepheus: keep the kernel log in .bss so a later boot's shim can read it out
++ * of DRAM. vprintf_internal() formats each message a second time into this
++ * buffer; the cache is cleaned whenever a newline arrives so the text survives
 + * a reset even when the panic path itself dies.
 + */
 +#define CEPH_LOGBUF_SIZE  (1u << 20)
@@ -20,35 +20,71 @@ diff --git a/osfmk/kern/printf.c b/osfmk/kern/printf.c
 +volatile char ceph_logbuf[CEPH_LOGBUF_SIZE];
 +
 +static void
-+ceph_logbuf_putc(char c)
++ceph_log_append(const char *s, unsigned len)
 +{
 +	volatile uint32_t *hdr = (volatile uint32_t *)ceph_logbuf;
 +	uint32_t off;
++	unsigned i;
++	int newline = 0;
 +
 +	if (hdr[0] != CEPH_LOGBUF_MAGIC) {
 +		hdr[0] = CEPH_LOGBUF_MAGIC;
 +		hdr[1] = 0;
 +	}
 +	off = hdr[1];
-+	if (off >= CEPH_LOGBUF_SIZE - 9) {
-+		return;
++	for (i = 0; i < len && off < CEPH_LOGBUF_SIZE - 9; i++) {
++		ceph_logbuf[8 + off] = s[i];
++		off++;
++		if (s[i] == '\n') {
++			newline = 1;
++		}
 +	}
-+	ceph_logbuf[8 + off] = c;
-+	ceph_logbuf[8 + off + 1] = 0;
-+	hdr[1] = off + 1;
++	ceph_logbuf[8 + off] = 0;
++	hdr[1] = off;
 +
-+	if (c == '\n') {
-+		vm_offset_t start = (off > 128) ? (off - 128) : 0;
++	if (newline) {
++		vm_offset_t start = (off > 256) ? (off - 256) : 0;
 +
 +		CleanPoC_DcacheRegion_Force(
 +		    (vm_offset_t)(ceph_logbuf + 8 + start), off - start + 1);
 +	}
 +}
 +
- void
- cons_putc_locked(char c)
++struct ceph_sink {
++	char *p;
++	unsigned len;
++	unsigned cap;
++};
++
++static void
++ceph_sink_putc(char c, void *arg)
++{
++	struct ceph_sink *s = (struct ceph_sink *)arg;
++
++	if (s->len + 1 < s->cap) {
++		s->p[s->len++] = c;
++	}
++}
++
+ __printflike(1, 0)
+ static int
+ vprintf_internal(const char *fmt, va_list ap_in, void *caller)
  {
-+	ceph_logbuf_putc(c);
- 	if (!disableConsoleOutput) {
- 		console_write_char(c);
- 	}
++	{
++		char ceph_tmp[512];
++		struct ceph_sink ceph_s;
++		va_list ceph_ap;
++
++		ceph_s.p = ceph_tmp;
++		ceph_s.len = 0;
++		ceph_s.cap = sizeof(ceph_tmp);
++		va_copy(ceph_ap, ap_in);
++		__doprnt(fmt, ceph_ap, ceph_sink_putc, &ceph_s, 16, TRUE);
++		va_end(ceph_ap);
++		ceph_tmp[ceph_s.len] = 0;
++		ceph_log_append(ceph_tmp, ceph_s.len);
++	}
++
+ 	if (fmt) {
+ 		struct console_printbuf_state info_data;
+ 
