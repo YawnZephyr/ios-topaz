@@ -1,0 +1,65 @@
+diff --git a/osfmk/kern/printf.c b/osfmk/kern/printf.c
+--- a/osfmk/kern/printf.c
++++ b/osfmk/kern/printf.c
+@@ -864,10 +864,61 @@
+ 	}
+ }
+ 
++extern void console_write_char(char c);
++
++static void
++ceph_raw_puts(const char *s)
++{
++	while (*s) {
++		console_write_char(*s++);
++	}
++}
++
++static void
++ceph_raw_hex(uint64_t v)
++{
++	char buf[19];
++	int i;
++
++	buf[0] = '0';
++	buf[1] = 'x';
++	for (i = 0; i < 16; i++) {
++		unsigned d = (unsigned)((v >> (60 - i * 4)) & 0xf);
++		buf[2 + i] = (char)(d < 10 ? '0' + d : 'a' + (d - 10));
++	}
++	buf[18] = 0;
++	ceph_raw_puts(buf);
++}
++
++/*
++ * cepheus: log_lock is the ticket lock that the console path takes. If it is
++ * the zeroed lock behind the "Invalid ticket lock" panic, printing through
++ * printf() would deadlock on it, so dump its state with raw console writes
++ * before anything takes the lock.
++ */
++static void
++ceph_dump_log_lock_once(void)
++{
++	static int done;
++	uint32_t type;
++
++	if (done) {
++		return;
++	}
++	done = 1;
++	type = *(volatile uint32_t *)&log_lock;
++	ceph_raw_puts("\nCEPH LOGLOCK addr=");
++	ceph_raw_hex((uint64_t)(uintptr_t)&log_lock);
++	ceph_raw_puts(" type=");
++	ceph_raw_hex(type);
++	ceph_raw_puts(" want=0x4c43544b\n");
++}
++
+ __printflike(1, 0)
+ static int
+ vprintf_internal(const char *fmt, va_list ap_in, void *caller)
+ {
++	ceph_dump_log_lock_once();
+ 	if (fmt) {
+ 		struct console_printbuf_state info_data;
+ 
