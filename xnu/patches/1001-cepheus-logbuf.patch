@@ -1,0 +1,56 @@
+diff --git a/osfmk/kern/printf.c b/osfmk/kern/printf.c
+--- a/osfmk/kern/printf.c
++++ b/osfmk/kern/printf.c
+@@ -877,9 +877,52 @@
+ 	buf[off + 1] = 0;
+ 	hdr[1] = off + 1;
+ }
++
++extern void CleanPoC_DcacheRegion_Force(vm_offset_t, vm_size_t);
++
++/*
++ * cepheus: keep the whole console log in .bss. The next boot's shim reads it
++ * straight out of DRAM by physical address, so a lock-freed console or a
++ * recursive panic no longer hides the boot log. Each completed line is cleaned
++ * out of the cache so it survives a reset.
++ */
++#define CEPH_LOGBUF_SIZE  (1u << 20)
++#define CEPH_LOGBUF_MAGIC 0x43455048u   /* 'CEPH' */
++
++__attribute__((section("__DATA,__cephlog"), aligned(16384)))
++volatile char ceph_logbuf[CEPH_LOGBUF_SIZE];
++
++static void
++ceph_logbuf_putc(char c)
++{
++	volatile uint32_t *hdr = (volatile uint32_t *)ceph_logbuf;
++	uint32_t off;
++
++	if (hdr[0] != CEPH_LOGBUF_MAGIC) {
++		hdr[0] = CEPH_LOGBUF_MAGIC;
++		hdr[1] = 0;
++	}
++	off = hdr[1];
++	if (off >= CEPH_LOGBUF_SIZE - 9) {
++		return;
++	}
++	ceph_logbuf[8 + off] = c;
++	ceph_logbuf[8 + off + 1] = 0;
++	hdr[1] = off + 1;
++
++	if (c == '\n') {
++		vm_offset_t start = (off > 128) ? (off - 128) : 0;
++
++		CleanPoC_DcacheRegion_Force(
++		    (vm_offset_t)(ceph_logbuf + 8 + start), off - start + 1);
++	}
++}
++
++
+ void
+ cons_putc_locked(char c)
+ {
++	ceph_logbuf_putc(c);
+ 	ceph_log_putc(c);
+ 	if (!disableConsoleOutput) {
+ 		console_write_char(c);
