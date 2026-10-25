@@ -1,17 +1,15 @@
 diff --git a/osfmk/kern/printf.c b/osfmk/kern/printf.c
 --- a/osfmk/kern/printf.c
 +++ b/osfmk/kern/printf.c
-@@ -864,10 +864,61 @@
+@@ -887,10 +887,58 @@
  	}
  }
  
-+extern void console_write_char(char c);
-+
 +static void
 +ceph_raw_puts(const char *s)
 +{
 +	while (*s) {
-+		console_write_char(*s++);
++		cons_putc_locked(*s++);
 +	}
 +}
 +
@@ -32,10 +30,9 @@ diff --git a/osfmk/kern/printf.c b/osfmk/kern/printf.c
 +}
 +
 +/*
-+ * cepheus: log_lock is the ticket lock that the console path takes. If it is
-+ * the zeroed lock behind the "Invalid ticket lock" panic, printing through
-+ * printf() would deadlock on it, so dump its state with raw console writes
-+ * before anything takes the lock.
++ * cepheus: log_lock is the ticket lock the console path takes. If it is the
++ * zeroed lock behind the "Invalid ticket lock" panic, printf() would deadlock
++ * on it, so dump its state with raw console writes before anything locks it.
 + */
 +static void
 +ceph_dump_log_lock_once(void)
