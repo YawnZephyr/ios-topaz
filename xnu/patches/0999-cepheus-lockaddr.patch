@@ -1,0 +1,34 @@
+diff --git a/osfmk/kern/lock_ticket.c b/osfmk/kern/lock_ticket.c
+--- a/osfmk/kern/lock_ticket.c
++++ b/osfmk/kern/lock_ticket.c
+@@ -28,6 +28,7 @@
+ 
+ #define LOCK_PRIVATE 1
+ #include <stdint.h>
++#include <kern/printf.h>
+ #include <kern/thread.h>
+ #include <kern/locks_internal.h>
+ #include <kern/locks.h>
+@@ -129,6 +130,22 @@
+ static void
+ __lck_ticket_invalid_panic(lck_ticket_t *lck)
+ {
++	{
++		static int ceph_dumped;
++
++		/* cepheus: the panic that reports this lock prints a bogus %p
++		 * (nested panic), so dump the real pointer and its fields while
++		 * printf still works. Guard against recursion if the console
++		 * path itself takes the broken lock. */
++		if (!ceph_dumped) {
++			ceph_dumped = 1;
++			printf("CEPH LOCK: lck=%p type=0x%x ticket=0x%x owner=%p "
++			    "value=0x%x pad=0x%x caller=%p\n",
++			    lck, *(uint32_t *)lck, lck->lck_ticket_owner,
++			    lck->tu.lck_value, lck->lck_ticket_padding,
++			    __builtin_return_address(0));
++		}
++	}
+ 	panic("Invalid ticket lock %p <0x%08x 0x%08x 0x%08x 0x%08x>",
+ 	    lck, *(uint32_t *)lck, lck->lck_ticket_owner,
+ 	    lck->tu.lck_value, lck->lck_ticket_padding);
