@@ -1,0 +1,17 @@
+diff --git a/osfmk/kperf/kperf.c b/osfmk/kperf/kperf.c
+--- a/osfmk/kperf/kperf.c
++++ b/osfmk/kperf/kperf.c
+@@ -76,6 +76,13 @@
+ void
+ kperf_init_early(void)
+ {
++	/* cepheus: ml_wait_max_cpus() never completes on our platform */
++	{
++		extern int printf(const char *, ...);
++
++		printf("CEPH: kperf_init_early skipped\n");
++	}
++	return;
+ 	/*
+ 	 * kperf allocates based on the number of CPUs and requires them to all be
+ 	 * accounted for.

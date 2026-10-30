@@ -63,10 +63,23 @@ diff --git a/osfmk/kern/startup.c b/osfmk/kern/startup.c
  #endif
  
  	/*
-@@ -788,6 +797,7 @@
+@@ -788,6 +797,20 @@
  	 */
  #ifdef  MACH_BSD
  	bsd_init();
++	{
++		extern vm_offset_t ml_io_map(vm_offset_t, vm_size_t);
++		volatile uint32_t *ceph_ufs =
++		    (volatile uint32_t *)ml_io_map(0x1d84000, 0x1000);
++
++		if (ceph_ufs != NULL) {
++			printf("CEPH UFS: cap=0x%x ver=0x%x hcs=0x%x hce=0x%x\n",
++			    ceph_ufs[0x00 / 4], ceph_ufs[0x08 / 4],
++			    ceph_ufs[0x30 / 4], ceph_ufs[0x50 / 4]);
++		} else {
++			printf("CEPH UFS: ml_io_map failed\n");
++		}
++	}
 +	printf("CEPH: entering bsd_init\n");
  #endif
  
