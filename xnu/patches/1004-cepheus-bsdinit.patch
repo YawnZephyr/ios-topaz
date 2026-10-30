@@ -1,23 +1,7 @@
 diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
 --- a/bsd/kern/bsd_init.c
 +++ b/bsd/kern/bsd_init.c
-@@ -680,6 +680,7 @@
- 	 */
- 	bsd_init_kprintf("calling bsd_bufferinit\n");
- 	bsd_bufferinit();
-+	printf("CEPH BSD: bufferinit done\n");
- 
- 	/*
- 	 * Initialize the calendar.
-@@ -690,6 +691,7 @@
- 	/* Initialize the file systems. */
- 	bsd_init_kprintf("calling vfsinit\n");
- 	vfsinit();
-+	printf("CEPH BSD: vfsinit done\n");
- 
- #if CONFIG_PROC_UUID_POLICY
- 	/* Initial proc_uuid_policy subsystem */
-@@ -704,6 +706,7 @@
+@@ -704,6 +704,7 @@
  	/* Initialize mbuf's. */
  	bsd_init_kprintf("calling mbinit\n");
  	mbinit();
@@ -25,7 +9,7 @@ diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
  	restricted_in_port_init();
  #endif /* SOCKETS */
  
-@@ -862,6 +865,7 @@
+@@ -862,6 +863,7 @@
  
  		bsd_init_kprintf("calling setconf\n");
  		setconf();
@@ -33,7 +17,7 @@ diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
  #if CONFIG_NETBOOT
  		netboot = (mountroot == netboot_mountroot);
  #endif
-@@ -888,6 +892,7 @@
+@@ -888,6 +890,7 @@
  	}
  
  	IOSecureBSDRoot(rootdevice);
@@ -41,11 +25,3 @@ diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
  
  	mountlist.tqh_first->mnt_flag |= MNT_ROOTFS;
  
-@@ -1107,6 +1112,7 @@
- {
- 	u_int32_t       flags;
- 	kern_return_t   err;
-+	printf("CEPH BSD: setconf entered\n");
- 
- 	err = IOFindBSDRoot(rootdevice, sizeof(rootdevice), &rootdev, &flags);
- 	if (err) {
