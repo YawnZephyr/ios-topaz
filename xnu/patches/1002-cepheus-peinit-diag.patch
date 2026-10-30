@@ -1,12 +1,29 @@
 diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
 --- a/pexpert/arm/pe_init.c
 +++ b/pexpert/arm/pe_init.c
-@@ -247,8 +247,12 @@
+@@ -247,8 +247,29 @@
  	uint32_t        populate_registry_time_value = 0;
  
  	PE_init_printf(TRUE);
 -
 -	printf("iBoot version: %s\n", iBoot_version);
++	{
++		vm_offset_t ceph_pa = (vm_offset_t)PE_state.video.v_baseAddr;
++		vm_size_t ceph_len =
++		    (vm_size_t)PE_state.video.v_rowBytes * PE_state.video.v_height;
++
++		if (ceph_pa != 0 && ceph_len != 0) {
++			volatile uint32_t *ceph_fb =
++			    (volatile uint32_t *)ml_io_map(ceph_pa, ceph_len);
++
++			if (ceph_fb != NULL) {
++				for (vm_size_t ceph_i = 0; ceph_i < ceph_len / 4;
++				    ceph_i++) {
++					ceph_fb[ceph_i] = 0xff000000;
++				}
++			}
++		}
++	}
 +	printf("CEPH IO: enter\n");
 +
 +	printf("iBoot version: ");
@@ -16,7 +33,7 @@ diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
  #if defined(TARGET_OS_OSX) && defined(__arm64__)
  	printf("iBoot Stage 2 version: %s\n", iBoot_Stage_2_version);
  #endif /* defined(TARGET_OS_OSX) && defined(__arm64__) */
-@@ -271,6 +275,7 @@
+@@ -271,6 +292,7 @@
  	}
  
  	pe_prepare_images();
@@ -24,7 +41,7 @@ diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
  
  	scale = PE_state.video.v_scale;
  	flip = 1;
-@@ -327,6 +332,7 @@
+@@ -327,6 +349,7 @@
  	}
  
  	if (kdebug_enable && kdebug_debugid_enabled(IOKDBG_CODE(DBG_BOOTER, 0))) {
@@ -32,7 +49,7 @@ diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
  		/* Trace iBoot-provided timing information. */
  		if (kSuccess == SecureDTLookupEntry(0, "/chosen/iBoot", &entry)) {
  			uint32_t const * value_ptr;
-@@ -360,7 +366,9 @@
+@@ -360,7 +383,9 @@
  	}
  
  	InitIOKit(PE_state.deviceTreeHead);
@@ -42,7 +59,7 @@ diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
  }
  
  void
-@@ -380,6 +388,7 @@
+@@ -380,6 +405,7 @@
  	 */
  	zalloc_iokit_lockdown();
  	StartIOKitMatching();
@@ -50,7 +67,7 @@ diff --git a/pexpert/arm/pe_init.c b/pexpert/arm/pe_init.c
  }
  
  void
-@@ -388,6 +397,7 @@
+@@ -388,6 +414,7 @@
  	assert(PE_state.initialized);
  	PE_state.deviceTreeHead = (void *)((uintptr_t)PE_state.deviceTreeHead + slide);
  	SecureDTInit(PE_state.deviceTreeHead, PE_state.deviceTreeSize);
