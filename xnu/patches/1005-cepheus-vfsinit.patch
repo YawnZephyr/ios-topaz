@@ -1,0 +1,39 @@
+diff --git a/bsd/vfs/vfs_init.c b/bsd/vfs/vfs_init.c
+--- a/bsd/vfs/vfs_init.c
++++ b/bsd/vfs/vfs_init.c
+@@ -314,20 +314,25 @@
+ 	 * Initialize the vnode table
+ 	 */
+ 	vntblinit();
++	printf("CEPH VFS: vntblinit done\n");
+ 	/*
+ 	 * Initialize the filesystem event mechanism.
+ 	 */
+ 	vfs_event_init();
++	printf("CEPH VFS: vfs_event_init done\n");
+ 	/*
+ 	 * Initialize the vnode name cache
+ 	 */
+ 	nchinit();
++	printf("CEPH VFS: nchinit done\n");
+ 
+ 	/*
+ 	 * Build vnode operation vectors.
+ 	 */
+ 	vfs_op_init();
++	printf("CEPH VFS: vfs_op_init done\n");
+ 	vfs_opv_init();   /* finish the job */
++	printf("CEPH VFS: vfs_opv_init done\n");
+ 	/*
+ 	 * Initialize each file system type in the static list,
+ 	 * until the first NULL ->vfs_vfsops is encountered.
+@@ -367,7 +372,9 @@
+ 			sysctl_register_oid(vfsp->vfc_sysctl);
+ 		}
+ 
++		printf("CEPH VFS: init %s\n", vfsp->vfc_name);
+ 		(*vfsp->vfc_vfsops->vfs_init)(&vfsc);
++	printf("CEPH VFS: vfs_init returned\n");
+ 
+ 		numused_vfsslots++;
+ 		numregistered_fses++;
